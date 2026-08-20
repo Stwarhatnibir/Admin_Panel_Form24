@@ -1,0 +1,76 @@
+// Every important admin action is written here. This is intentionally a
+// single, narrow entry point - controllers/services should call `logAction`
+// rather than writing to the auditLogs collection directly, so the shape
+// of an audit entry stays consistent everywhere.
+const { db, COLLECTIONS, serverTimestamp, toCollectionArray } = require('../firebase/firestore');
+
+/**
+ * @param {Object} params
+ * @param {string} params.actorId - id of the admin who performed the action
+ * @param {string} params.actorRole - ADMIN | SUPER_ADMIN
+ * @param {string} params.action - one of constants/auditActions.js
+ * @param {string} params.entityType - e.g. 'application', 'user', 'scheme'
+ * @param {string} [params.entityId]
+ * @param {Object} [params.metadata] - free-form extra context. Must never
+ *   contain passwords, JWTs, raw OTP values, or other secrets - callers are
+ *   responsible for scrubbing sensitive fields before calling this.
+ * @param {*} [params.oldValue]
+ * @param {*} [params.newValue]
+ * @param {string} [params.fieldChanged]
+ * @param {string} [params.reason]
+ */
+async function logAction({
+  actorId,
+  actorRole,
+  action,
+  entityType,
+  entityId = null,
+  metadata = {},
+  oldValue = undefined,
+  newValue = undefined,
+  fieldChanged = undefined,
+  reason = undefined,
+}) {
+  const entry = {
+    actorId,
+    actorRole,
+    action,
+    entityType,
+    entityId,
+    metadata,
+    timestamp: serverTimestamp(),
+  };
+  if (fieldChanged !== undefined) entry.fieldChanged = fieldChanged;
+  if (oldValue !== undefined) entry.oldValue = oldValue;
+  if (newValue !== undefined) entry.newValue = newValue;
+  if (reason !== undefined) entry.reason = reason;
+
+  await db().collection(COLLECTIONS.AUDIT_LOGS).add(entry);
+}
+
+/**
+ * Lists audit logs with optional filters, newest first, paginated.
+ * @param {Object} filters
+ * @param {string} [filters.actorId]
+ * @param {string} [filters.action]
+ * @param {string} [filters.entityType]
+ * @param {string} [filters.entityId]
+ * @param {number} [filters.limit]
+ * @param {string} [filters.cursor] - document id to start after
+ */
+async function listAuditLogs(filters = {}) {
+  const { actorId, action, entityType, entityId, limit = 25 } = filters;
+  let query = db().collection(COLLECTIONS.AUDIT_LOGS).orderBy('timestamp', 'desc');
+
+  if (actorId) query = query.where('actorId', '==', actorId);
+  if (action) query = query.where('action', '==', action);
+  if (entityType) query = query.where('entityType', '==', entityType);
+  if (entityId) query = query.where('entityId', '==', entityId);
+
+  query = query.limit(Math.min(limit, 100));
+
+  const snapshot = await query.get();
+  return toCollectionArray(snapshot);
+}
+
+module.exports = { logAction, listAuditLogs };
