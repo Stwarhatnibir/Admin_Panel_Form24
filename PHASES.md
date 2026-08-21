@@ -12,7 +12,7 @@ the next, rather than scaffolding everything at once.
 | 4 | Applications (list, filters, detail page, status, tabs) | ✅ Done |
 | 5 | Chat (conversation list, real-time messaging, admin replies, internal notes) | ✅ Done |
 | 6 | Information Requests / Documents / OTP | ✅ Done |
-| 7 | Government schemes (dynamic fields, dynamic documents, CRUD) | ⏳ Not started |
+| 7 | Government schemes (dynamic fields, dynamic documents, CRUD) | ✅ Done |
 | 8 | Payments / Refunds (provider abstraction, Super Admin approval) | ⏳ Not started |
 | 9 | Notifications (FCM - individual, group, broadcast) | ⏳ Not started |
 | 10 | Admin management (add/remove Admin, activity log) | ⏳ Not started |
@@ -196,6 +196,45 @@ whether it's already in the committed file.
   yet verified: a live walkthrough against real Firestore/Storage data -
   same limitation noted in every earlier phase, compounded here by Storage
   also needing real file uploads to fully exercise the download path.
+
+## What "Done" means for Phase 7
+
+- **This extends, not replaces, the read-only `schemeService.js` from
+  Phase 4** - exactly as flagged in that phase's comments at the time. The
+  Applications filter dropdown and this full CRUD page now share the same
+  service and Firestore documents.
+- **Dynamic fields/documents (Section 28)** are plain string arrays
+  (`requiredFields`, `requiredDocuments`) editable from the UI with no code
+  changes required to add a new scheme - matching the spec's own example
+  ("Fields: Name, DOB, Address, Income, Occupation") exactly, rather than
+  inventing a richer per-field type/required schema the spec didn't ask
+  for. A new scheme with entirely different fields/documents is addable
+  purely through the Schemes page.
+- **Both Admin and Super Admin can manage schemes** - per Section 4/5's
+  permission tables, "Add/edit government schemes" and
+  "Activate/deactivate schemes" are listed under plain Admin, not
+  restricted to Super Admin. Enforced server-side like every other
+  permission in this app.
+- **Status changes are never foldable into a generic edit** - the
+  `updateSchemeSchema` is `.strict()` and has no `status` field at all, so
+  activating/deactivating always goes through the dedicated
+  `PATCH /:id/status` route and is always logged as `SCHEME_ACTIVATED`/
+  `SCHEME_DEACTIVATED` specifically, never folded into a generic
+  `SCHEME_UPDATED` entry - verified directly that `status` in the update
+  body is rejected.
+- **Price changes get a dedicated audit entry** (`PRICE_UPDATED`, with
+  old/new values) in addition to the general `SCHEME_UPDATED` entry,
+  matching the spec's own distinct audit action for price changes
+  (Section 33) - not merged into a generic diff the way most other
+  fields are.
+- Verified: backend syntax-checked and boot-tested with every new route; a
+  full route sweep confirmed correct 401s on every mutation endpoint
+  (create/update/status); every validator behavior (negative price
+  rejected, empty required-fields list rejected, `status` rejected on the
+  generic update endpoint, valid ACTIVE/INACTIVE accepted on the status
+  endpoint) was unit-verified directly against real input. Frontend build
+  and lint both pass clean. Not yet verified: a live walkthrough against
+  real Firestore data - same limitation noted in every earlier phase.
 
 ## Nav items that exist but aren't built yet
 

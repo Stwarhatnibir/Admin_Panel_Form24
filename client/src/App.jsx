@@ -11,6 +11,7 @@ import Applications from './pages/Applications/Applications';
 import ApplicationDetail from './pages/Applications/ApplicationDetail';
 import Conversations from './pages/Conversations/Conversations';
 import ConversationDetail from './pages/Conversations/ConversationDetail';
+import Schemes from './pages/Schemes/Schemes';
 import ComingSoon from './pages/ComingSoon';
 import { NAV_ITEMS } from './constants/navigation';
 
@@ -30,6 +31,7 @@ export default function App() {
               <Route path="/applications/:id" element={<ApplicationDetail />} />
               <Route path="/conversations" element={<Conversations />} />
               <Route path="/conversations/:id" element={<ConversationDetail />} />
+              <Route path="/schemes" element={<Schemes />} />
               {NAV_ITEMS.filter((item) => !item.implemented).map((item) => (
                 <Route
                   key={item.key}

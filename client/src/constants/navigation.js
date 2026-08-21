@@ -10,7 +10,7 @@ export const NAV_ITEMS = [
   { key: 'users', label: 'Users', path: '/users', implemented: true },
   { key: 'conversations', label: 'Conversations', path: '/conversations', implemented: true },
   { key: 'documents', label: 'Documents', path: '/documents', implemented: false },
-  { key: 'schemes', label: 'Schemes', path: '/schemes', implemented: false },
+  { key: 'schemes', label: 'Schemes', path: '/schemes', implemented: true },
   { key: 'payments', label: 'Payments', path: '/payments', implemented: false },
   { key: 'refunds', label: 'Refunds', path: '/refunds', implemented: false },
   { key: 'notifications', label: 'Notifications', path: '/notifications', implemented: false },

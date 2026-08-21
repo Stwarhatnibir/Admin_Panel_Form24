@@ -15,34 +15,6 @@
       ]
     },
     {
-      "collectionGroup": "informationRequests",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "applicationId",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "createdAt",
-          "order": "DESCENDING"
-        }
-      ]
-    },
-    {
-      "collectionGroup": "otpRequests",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "applicationId",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "requestedAt",
-          "order": "DESCENDING"
-        }
-      ]
-    },
-    {
       "collectionGroup": "internalNotes",
       "queryScope": "COLLECTION",
       "fields": [
