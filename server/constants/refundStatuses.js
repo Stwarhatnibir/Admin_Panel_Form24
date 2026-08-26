@@ -1,0 +1,4 @@
+const REFUND_STATUSES = Object.freeze(['PENDING_APPROVAL', 'APPROVED', 'REJECTED', 'PROCESSING', 'COMPLETED', 'FAILED']);
+const REFUND_TYPES = Object.freeze(['FULL', 'PARTIAL']);
+
+module.exports = { REFUND_STATUSES, REFUND_TYPES };

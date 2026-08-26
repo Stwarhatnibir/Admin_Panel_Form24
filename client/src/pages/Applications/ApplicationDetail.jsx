@@ -7,6 +7,8 @@ import conversationService from '../../services/conversationService';
 import DocumentsTab from '../../components/documents/DocumentsTab';
 import InformationRequestsPanel from '../../components/requests/InformationRequestsPanel';
 import OtpRequestsPanel from '../../components/requests/OtpRequestsPanel';
+import RefundRequestPanel from '../../components/refunds/RefundRequestPanel';
+import paymentService from '../../services/paymentService';
 import Tabs from '../../components/common/Tabs';
 import ErrorState from '../../components/common/ErrorState';
 import EmptyState from '../../components/common/EmptyState';
@@ -31,7 +33,7 @@ const TABS = [
   { key: 'activity', label: 'Activity' },
 ];
 
-const NOT_BUILT_TABS = new Set(['payment']);
+const NOT_BUILT_TABS = new Set();
 
 function formatDate(value) {
   if (!value) return '—';
@@ -132,13 +134,11 @@ function OverviewTab({ application, onStatusChanged }) {
         <div className="mt-4 space-y-4">
           <InformationRequestsPanel applicationId={application.id} />
           <OtpRequestsPanel applicationId={application.id} />
+          <RefundRequestPanel applicationId={application.id} />
         </div>
 
         <div className="mt-4 rounded-lg bg-surface-muted p-3">
-          <p className="text-xs text-slate-500">
-            Reply to user and request refund actions become available as their build phases land (Phase 8 for
-            refunds - replying to the user is already possible from the Conversation tab).
-          </p>
+          <p className="text-xs text-slate-500">Replying to the user is available from the Conversation tab.</p>
         </div>
       </div>
 
@@ -212,6 +212,44 @@ function UserInfoTab({ userId }) {
         <SummaryRow label="Annual Income">{formatCurrency(user.annualIncome)}</SummaryRow>
         <SummaryRow label="Father's Name">{user.fatherName}</SummaryRow>
       </div>
+    </div>
+  );
+}
+
+function PaymentTab({ applicationId }) {
+  const [payments, setPayments] = useState(null);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    paymentService
+      .listPayments({ applicationId })
+      .then((result) => setPayments(result.payments))
+      .catch((err) => setError(err.message || 'Unable to load payment.'));
+  }, [applicationId]);
+
+  if (error) return <ErrorState message={error} />;
+  if (payments === null) return <SkeletonBlock className="h-24 w-full" />;
+  if (payments.length === 0) {
+    return <EmptyState title="No payment recorded for this application yet." />;
+  }
+
+  return (
+    <div className="space-y-3">
+      {payments.map((p) => (
+        <div key={p.id} className="card p-5">
+          <div className="flex items-center justify-between">
+            <p className="font-display text-sm font-semibold text-slate-950">
+              {new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(p.amount)}
+            </p>
+            <StatusBadge label={PAYMENT_STATUS_LABELS[p.status] || p.status} tone={PAYMENT_STATUS_TONES[p.status] || 'bg-slate-100 text-slate-700'} />
+          </div>
+          <div className="mt-2 divide-y divide-slate-100">
+            <SummaryRow label="Payment ID">{p.id}</SummaryRow>
+            <SummaryRow label="Provider">{p.provider}</SummaryRow>
+            <SummaryRow label="Provider Transaction ID">{p.providerTransactionId}</SummaryRow>
+          </div>
+        </div>
+      ))}
     </div>
   );
 }
@@ -347,6 +385,7 @@ export default function ApplicationDetail() {
         {activeTab === 'user' && <UserInfoTab userId={application.userId} />}
         {activeTab === 'documents' && <DocumentsTab applicationId={application.id} />}
         {activeTab === 'conversation' && <ConversationTab applicationId={application.id} />}
+        {activeTab === 'payment' && <PaymentTab applicationId={application.id} />}
         {activeTab === 'activity' && <ActivityTab applicationId={id} />}
         {NOT_BUILT_TABS.has(activeTab) && (
           <EmptyState

@@ -13,8 +13,8 @@ the next, rather than scaffolding everything at once.
 | 5 | Chat (conversation list, real-time messaging, admin replies, internal notes) | ✅ Done |
 | 6 | Information Requests / Documents / OTP | ✅ Done |
 | 7 | Government schemes (dynamic fields, dynamic documents, CRUD) | ✅ Done |
-| 8 | Payments / Refunds (provider abstraction, Super Admin approval) | ⏳ Not started |
-| 9 | Notifications (FCM - individual, group, broadcast) | ⏳ Not started |
+| 8 | Payments / Refunds (provider abstraction, Super Admin approval) | ✅ Done |
+| 9 | Notifications (FCM - individual, group, broadcast) | ✅ Done |
 | 10 | Admin management (add/remove Admin, activity log) | ⏳ Not started |
 | 11 | Audit logs, security hardening, permission testing, production cleanup | ⏳ Not started (audit log write path exists; UI + full test suite pending) |
 
@@ -235,6 +235,84 @@ whether it's already in the committed file.
   endpoint) was unit-verified directly against real input. Frontend build
   and lint both pass clean. Not yet verified: a live walkthrough against
   real Firestore data - same limitation noted in every earlier phase.
+
+## What "Done" means for Phase 8
+
+- **Payment provider abstraction**: `server/services/payment/PaymentProvider.js`
+  defines the contract (`verifyPayment`, `createRefund`); `MockPaymentProvider.js`
+  is a clearly-labeled development-only implementation; `payment/index.js`
+  is a factory keyed off `PAYMENT_PROVIDER` in `.env`. Swapping in a real
+  gateway later means writing one new file implementing the same contract
+  and changing one env var - `paymentService.js` and `refundService.js`
+  never reference a specific provider.
+- **The critical permission boundary - Admin can request a refund but
+  cannot approve/reject one - was verified by directly unit-testing the
+  actual `authorize()` middleware function**, not by re-deriving the logic
+  or just trusting the route wiring looks right. Confirmed: `ADMIN` is
+  blocked from a Super-Admin-only route, `SUPER_ADMIN` is allowed through,
+  and `ADMIN` is allowed on a both-roles route. This is the same middleware
+  every route in the app uses, so this test result generalizes.
+- **Refundable-amount validation** happens twice: once when a refund is
+  requested (rejecting zero/negative amounts or amounts exceeding the
+  original payment), and again when it's approved (in case another refund
+  completed in the interim and the balance changed) - not just validated
+  once at creation and trusted afterward.
+- **Index audit caught a subtlety this codebase hadn't needed before**:
+  `findRefundablePaymentForApplication` combines an equality filter with an
+  `in` filter, which Firestore requires a composite index for even without
+  an `orderBy` - unlike pure equality-only multi-field queries (like
+  `getAlreadyRefundedAmount`'s `paymentId == / status ==`), which Firestore
+  handles automatically. `firestore.indexes.json` grew from 50 to 57
+  entries for this phase; each addition is commented with which query it
+  serves and, where relevant, why an index was deliberately *not* added.
+- **Applications' denormalized `paymentStatus` field (from Phase 4) is kept
+  in sync** when a refund completes - `refundService.js` updates both the
+  `payments` and `applications` documents so the Applications list still
+  shows accurate payment status without a second source of truth drifting
+  out of date.
+- Verified: backend syntax-checked and boot-tested with every new route; a
+  full route sweep confirmed correct 401s on every endpoint including
+  refund approve/reject; every refund validator behavior (zero/negative
+  amount rejected, missing reason rejected, invalid refund type rejected)
+  was unit-verified directly, alongside the authorize() middleware test
+  described above. Frontend build and lint both pass clean. Not yet
+  verified: a live walkthrough against real Firestore data, including
+  actually watching an approval move a payment from SUCCESSFUL to
+  PARTIALLY_REFUNDED - same limitation noted in every earlier phase.
+
+## What "Done" means for Phase 9
+
+- **Send targets**: Individual, Selected Group, and Everyone are all
+  implemented with a real discriminated-union validator (unit-verified
+  directly - invalid recipient types rejected, empty group selections
+  rejected, EVERYONE correctly requires no recipient list).
+- **Delivery is genuinely attempted through Firebase Cloud Messaging for
+  any recipient with a registered device token** - but registering that
+  token is the user-facing app's job (out of scope here, per the project
+  brief), so seed/development users won't have one. Sends to them are
+  honestly counted as "skipped (no device registered)", not silently
+  dropped or falsely reported as delivered - the same documented-gap
+  pattern as the OTP SMS gateway and payment provider. The delivery result
+  shown after sending states this plainly rather than looking like a
+  success.
+- **Deep linking** (Section 31): an optional `relatedApplicationId` is
+  included as FCM `data` payload for a real client app to route on. No
+  application picker UI was built for this field - it's a plain text
+  input - since the admin would need to already know the ID; a proper
+  picker is a reasonable follow-up if this field sees real use.
+- **Not built in this phase**: Section 48's notification-count badges on
+  the sidebar (Applications: 12, Chats: 5, etc.) - that's a
+  cross-cutting UI feature touching every section's nav item, not
+  specific to the Notifications feature itself, and wasn't silently
+  dropped - it's called out here as unbuilt rather than left unmentioned.
+- Verified: backend syntax-checked and boot-tested with every new route; a
+  full route sweep confirmed correct 401s; every discriminated-union
+  validator path was unit-verified directly against real input (all three
+  recipient types, plus their specific rejection cases). Frontend build and
+  lint both pass clean. Not yet verified: a live send against real
+  Firestore/FCM - same limitation noted in every earlier phase, compounded
+  here by FCM delivery also needing a real registered device token to
+  exercise the "sent" path at all (as opposed to "skipped").
 
 ## Nav items that exist but aren't built yet
 

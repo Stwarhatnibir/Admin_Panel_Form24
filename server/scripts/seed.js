@@ -384,11 +384,148 @@ async function seedRequestsDocumentsOtp() {
   );
 }
 
+/**
+ * Creates a payment record for every seeded application (matching its
+ * denormalized amount/paymentStatus fields - see seedSchemesAndApplications
+ * above), plus a handful of refund requests in different states so the
+ * Payments and Refunds pages have something real to show, including at
+ * least one PENDING_APPROVAL request a Super Admin can actually approve.
+ */
+async function seedPaymentsAndRefunds() {
+  const paymentsRef = db().collection(COLLECTIONS.PAYMENTS);
+  const existingPayments = await paymentsRef.limit(1).get();
+  if (!existingPayments.empty) {
+    console.log('[seed] payments already exist - skipping Phase 8 seed data.');
+    return;
+  }
+
+  const applicationsSnapshot = await db().collection(COLLECTIONS.APPLICATIONS).get();
+  const applications = applicationsSnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+  if (applications.length === 0) {
+    console.log('[seed] No applications found - skipping Phase 8 seed data.');
+    return;
+  }
+
+  const refundRequestsRef = db().collection(COLLECTIONS.REFUND_REQUESTS);
+  const now = new Date();
+  const paymentIdByApplicationId = {};
+
+  for (const application of applications) {
+    const ref = await paymentsRef.add({
+      userId: application.userId,
+      userName: application.userName,
+      applicationId: application.id,
+      amount: application.amount,
+      currency: 'INR',
+      status: application.paymentStatus,
+      provider: 'mock',
+      providerTransactionId: `mock_txn_${application.id}`,
+      createdAt: application.createdAt,
+      updatedAt: application.createdAt,
+    });
+    paymentIdByApplicationId[application.id] = ref.id;
+  }
+  console.log(`[seed] Created ${applications.length} payment records.`);
+
+  const successfulApplications = applications.filter((a) => a.paymentStatus === 'SUCCESSFUL');
+  const refundSamples = successfulApplications.slice(0, 4);
+  const refundStatuses = ['PENDING_APPROVAL', 'COMPLETED', 'REJECTED', 'PENDING_APPROVAL'];
+
+  let refundCount = 0;
+  for (let i = 0; i < refundSamples.length; i += 1) {
+    const application = refundSamples[i];
+    const status = refundStatuses[i % refundStatuses.length];
+    const requestedAmount = Math.round(application.amount * 0.5); // partial refund sample
+
+    const entry = {
+      applicationId: application.id,
+      userId: application.userId,
+      paymentId: paymentIdByApplicationId[application.id],
+      requestedAmount,
+      refundType: 'PARTIAL',
+      reason: 'Fake development reason: user requested a partial refund.',
+      requestedBy: 'seed-script',
+      requestedByName: 'Seed Script',
+      status,
+      createdAt: now,
+      decidedBy: status === 'PENDING_APPROVAL' ? null : 'seed-script',
+      decidedAt: status === 'PENDING_APPROVAL' ? null : now,
+      rejectionReason: status === 'REJECTED' ? 'Fake development reason: outside refund window.' : null,
+    };
+    await refundRequestsRef.add(entry);
+    refundCount += 1;
+
+    if (status === 'COMPLETED') {
+      await paymentsRef.doc(paymentIdByApplicationId[application.id]).update({ status: 'PARTIALLY_REFUNDED' });
+    }
+  }
+  console.log(`[seed] Created ${refundCount} refund requests (including at least one PENDING_APPROVAL).`);
+}
+
+/**
+ * Creates a couple of sample notification records. None of the seeded
+ * users have a real fcmToken (that field is only ever written by the
+ * user-facing app, out of scope here), so these will honestly show
+ * deliveryStatus.skipped === recipientCount rather than a fabricated
+ * "delivered" count - demonstrating the real, documented gap rather than
+ * hiding it.
+ */
+async function seedNotifications() {
+  const notificationsRef = db().collection(COLLECTIONS.NOTIFICATIONS);
+  const existing = await notificationsRef.limit(1).get();
+  if (!existing.empty) {
+    console.log('[seed] notifications already exist - skipping.');
+    return;
+  }
+
+  const usersSnapshot = await db().collection(COLLECTIONS.USERS).limit(3).get();
+  const users = usersSnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+  if (users.length === 0) {
+    console.log('[seed] No users found - skipping notification seed data.');
+    return;
+  }
+
+  const now = new Date();
+  const samples = [
+    {
+      recipientType: 'EVERYONE',
+      recipientIds: users.map((u) => u.id),
+      recipientCount: users.length,
+      title: 'New scheme available',
+      message: 'Yuva Sathi applications are now open.',
+      relatedApplicationId: null,
+      createdBy: 'seed-script',
+      createdByName: 'Seed Script',
+      createdAt: now,
+      deliveryStatus: { totalRecipients: users.length, sent: 0, skipped: users.length, failed: 0 },
+    },
+    {
+      recipientType: 'INDIVIDUAL',
+      recipientIds: [users[0].id],
+      recipientCount: 1,
+      title: 'Document verified',
+      message: 'Your Aadhaar card has been verified.',
+      relatedApplicationId: null,
+      createdBy: 'seed-script',
+      createdByName: 'Seed Script',
+      createdAt: now,
+      deliveryStatus: { totalRecipients: 1, sent: 0, skipped: 1, failed: 0 },
+    },
+  ];
+
+  for (const sample of samples) {
+    await notificationsRef.add(sample);
+  }
+  console.log(`[seed] Created ${samples.length} sample notifications (delivery honestly shown as skipped - see comment above).`);
+}
+
 seedAdmins()
   .then(seedUsers)
   .then(seedSchemesAndApplications)
   .then(seedConversations)
   .then(seedRequestsDocumentsOtp)
+  .then(seedPaymentsAndRefunds)
+  .then(seedNotifications)
   .then(() => process.exit(0))
   .catch((err) => {
     console.error('[seed] Failed:', err.message);

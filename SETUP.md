@@ -34,7 +34,7 @@ Then:
 
 ```bash
 npm install
-npm run seed   # creates Super Admin + 2 Admins, 10 fake users, 3 fake schemes, 25 fake applications, 12 fake conversations, plus information requests / document metadata / OTP requests
+npm run seed   # creates Super Admin + 2 Admins, 10 fake users, 3 fake schemes, 25 fake applications, 12 fake conversations, information requests / document metadata / OTP requests, payment records, refund requests, and sample notifications
 npm run dev    # starts the API on http://localhost:5000
 ```
 

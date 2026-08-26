@@ -12,6 +12,9 @@ import ApplicationDetail from './pages/Applications/ApplicationDetail';
 import Conversations from './pages/Conversations/Conversations';
 import ConversationDetail from './pages/Conversations/ConversationDetail';
 import Schemes from './pages/Schemes/Schemes';
+import Payments from './pages/Payments/Payments';
+import Refunds from './pages/Refunds/Refunds';
+import Notifications from './pages/Notifications/Notifications';
 import ComingSoon from './pages/ComingSoon';
 import { NAV_ITEMS } from './constants/navigation';
 
@@ -32,6 +35,9 @@ export default function App() {
               <Route path="/conversations" element={<Conversations />} />
               <Route path="/conversations/:id" element={<ConversationDetail />} />
               <Route path="/schemes" element={<Schemes />} />
+              <Route path="/payments" element={<Payments />} />
+              <Route path="/refunds" element={<Refunds />} />
+              <Route path="/notifications" element={<Notifications />} />
               {NAV_ITEMS.filter((item) => !item.implemented).map((item) => (
                 <Route
                   key={item.key}

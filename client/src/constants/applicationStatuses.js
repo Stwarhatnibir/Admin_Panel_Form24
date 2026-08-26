@@ -32,6 +32,8 @@ export const STATUS_TONES = {
   CANCELLED: 'bg-slate-200 text-slate-500',
 };
 
+export const PAYMENT_STATUSES = ['PENDING', 'SUCCESSFUL', 'FAILED', 'PARTIALLY_REFUNDED', 'FULLY_REFUNDED'];
+
 export const PAYMENT_STATUS_LABELS = {
   PENDING: 'Pending',
   SUCCESSFUL: 'Successful',
