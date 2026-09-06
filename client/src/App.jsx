@@ -15,8 +15,10 @@ import Schemes from './pages/Schemes/Schemes';
 import Payments from './pages/Payments/Payments';
 import Refunds from './pages/Refunds/Refunds';
 import Notifications from './pages/Notifications/Notifications';
+import Admins from './pages/Admins/Admins';
 import ComingSoon from './pages/ComingSoon';
 import { NAV_ITEMS } from './constants/navigation';
+import { ROLES } from './constants/roles';
 
 export default function App() {
   return (
@@ -38,6 +40,14 @@ export default function App() {
               <Route path="/payments" element={<Payments />} />
               <Route path="/refunds" element={<Refunds />} />
               <Route path="/notifications" element={<Notifications />} />
+              <Route
+                path="/admins"
+                element={
+                  <RoleGate roles={[ROLES.SUPER_ADMIN]}>
+                    <Admins />
+                  </RoleGate>
+                }
+              />
               {NAV_ITEMS.filter((item) => !item.implemented).map((item) => (
                 <Route
                   key={item.key}

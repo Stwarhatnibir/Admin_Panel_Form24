@@ -15,7 +15,7 @@ the next, rather than scaffolding everything at once.
 | 7 | Government schemes (dynamic fields, dynamic documents, CRUD) | ✅ Done |
 | 8 | Payments / Refunds (provider abstraction, Super Admin approval) | ✅ Done |
 | 9 | Notifications (FCM - individual, group, broadcast) | ✅ Done |
-| 10 | Admin management (add/remove Admin, activity log) | ⏳ Not started |
+| 10 | Admin management (add/remove Admin, activity log) | ✅ Done |
 | 11 | Audit logs, security hardening, permission testing, production cleanup | ⏳ Not started (audit log write path exists; UI + full test suite pending) |
 
 ## What "Done" means for Phases 1–2
@@ -135,6 +135,21 @@ the next, rather than scaffolding everything at once.
   multi-message conversation walkthrough (including watching the poll pick
   up a new message) against real Firestore data - same limitation noted in
   every earlier phase.
+
+## Known issue found and fixed: two indexes missing from the committed file
+
+While deploying indexes via `firebase deploy --only firestore:indexes`, the
+CLI flagged two indexes that existed in the live Firebase project (created
+earlier via the auto-generated links Firestore provides on a
+`FAILED_PRECONDITION` error) but were missing from the committed
+`firestore.indexes.json`: `informationRequests` (applicationId + createdAt)
+and `otpRequests` (applicationId + requestedAt). Both are genuinely
+required by `informationRequestService.js`/`otpService.js`'s list queries
+- an omission in my original audit, not indexes that should be deleted.
+Both are now in the file (59 total). If `firebase deploy` ever flags an
+index as "not present in your file" again, treat that as a signal to add
+it to the file, not to delete it, unless you're certain it's genuinely
+unused.
 
 ## Known issue found and fixed: missing Firestore composite indexes
 
@@ -313,6 +328,48 @@ whether it's already in the committed file.
   Firestore/FCM - same limitation noted in every earlier phase, compounded
   here by FCM delivery also needing a real registered device token to
   exercise the "sent" path at all (as opposed to "skipped").
+
+## What "Done" means for Phase 10
+
+- **The entire `/api/admins` router is Super Admin only** - verified by
+  directly unit-testing the actual `authorize()` middleware (the same test
+  pattern used for the refund approve/reject boundary in Phase 8):
+  confirmed `ADMIN` is blocked and `SUPER_ADMIN` is allowed on every route
+  in this router.
+- **"Removing" an admin sets `status: 'REMOVED'` rather than deleting the
+  Firestore document.** This is deliberate: `authenticate.js`'s existing
+  Phase 1 logic already rejects any non-`ACTIVE` admin on every request,
+  so this immediately and correctly revokes access - matching the
+  confirmation dialog's exact wording ("This will revoke admin access") -
+  while keeping that admin's id valid as an `actorId` reference in every
+  audit log entry they ever created. Hard-deleting would have orphaned
+  that history.
+- **Two lockout safety guards**, neither explicitly required by the spec
+  but necessary for the feature to be safe to use: a Super Admin cannot
+  remove their own account, and cannot remove the last remaining active
+  Super Admin (which would leave nobody able to manage admins at all).
+  Both are implemented as explicit, clearly-worded `ApiError`s, not silent
+  no-ops.
+- **Admin activity** (Section 32/34) reuses the exact same
+  `auditService.listAuditLogs({ actorId })` function written back in
+  Phase 1 but never exposed through a route until now - confirmed this by
+  reading, not rewriting, that function. A composite index
+  (`auditLogs`: actorId + timestamp) was added since this filter is now
+  actually reachable via `GET /api/admins/:id/activity`.
+- **Index bookkeeping**: while deploying indexes for this project, two
+  indexes were found to exist in the live Firebase project but were
+  missing from the committed `firestore.indexes.json`
+  (`informationRequests`, `otpRequests`) - an omission from an earlier
+  phase's audit, now corrected. See the "Known issue" note above this
+  table. Total is now 60 indexes.
+- Verified: backend syntax-checked and boot-tested with every new route; a
+  full route sweep confirmed correct 401s on every admin-management
+  endpoint; the admin creation validator was unit-verified directly
+  (short password rejected, invalid email rejected, invalid role
+  rejected, both ADMIN and SUPER_ADMIN roles accepted). Frontend build and
+  lint both pass clean. Not yet verified: a live walkthrough against real
+  Firestore data, including actually attempting the two lockout guards
+  against real records - same limitation noted in every earlier phase.
 
 ## Nav items that exist but aren't built yet
 

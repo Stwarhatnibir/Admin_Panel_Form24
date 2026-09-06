@@ -10,6 +10,7 @@ const otpRoutes = require('./otpRoutes');
 const paymentRoutes = require('./paymentRoutes');
 const refundRoutes = require('./refundRoutes');
 const notificationRoutes = require('./notificationRoutes');
+const adminRoutes = require('./adminRoutes');
 
 const router = express.Router();
 
@@ -24,8 +25,9 @@ router.use('/otp-requests', otpRoutes);
 router.use('/payments', paymentRoutes);
 router.use('/refunds', refundRoutes);
 router.use('/notifications', notificationRoutes);
+router.use('/admins', adminRoutes);
 
-// Additional route modules (admins, audit-logs) are added here as each
-// build phase is implemented - see PHASES.md.
+// Additional route modules (audit-logs) are added here as each build phase
+// is implemented - see PHASES.md.
 
 module.exports = router;
