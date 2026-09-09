@@ -36,7 +36,10 @@ Then open http://localhost:5173 and log in with the credentials printed by
 
 ## Current status
 
-Phases 1 (Authentication) and 2 (Admin layout + Dashboard) are implemented.
+All 11 build phases are complete: Authentication, Admin layout/Dashboard,
+Users, Applications, Chat/Conversations, Information Requests/Documents/OTP,
+Government Schemes, Payments/Refunds, Notifications, Admin management, and
+Audit Logs/security hardening/permission testing.
 See [`PHASES.md`](./PHASES.md) for the full roadmap, what's been verified,
 and what's still open.
 

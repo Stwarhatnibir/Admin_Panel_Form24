@@ -14,6 +14,6 @@ export const NAV_ITEMS = [
   { key: 'payments', label: 'Payments', path: '/payments', implemented: true },
   { key: 'refunds', label: 'Refunds', path: '/refunds', implemented: true },
   { key: 'notifications', label: 'Notifications', path: '/notifications', implemented: true },
-  { key: 'audit', label: 'Audit Logs', path: '/audit-logs', implemented: false },
+  { key: 'audit', label: 'Audit Logs', path: '/audit-logs', implemented: true, roles: [ROLES.SUPER_ADMIN] },
   { key: 'admins', label: 'Admins', path: '/admins', implemented: true, roles: [ROLES.SUPER_ADMIN] },
 ];

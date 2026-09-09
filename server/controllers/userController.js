@@ -22,7 +22,7 @@ const updateUser = asyncHandler(async (req, res) => {
 // a profile's Activity tab.
 const getUserActivity = asyncHandler(async (req, res) => {
   const logs = await auditService.listAuditLogs({ entityType: 'user', entityId: req.params.id, limit: 50 });
-  res.status(200).json({ success: true, data: logs });
+  res.status(200).json({ success: true, data: logs.logs });
 });
 
 module.exports = { listUsers, getUser, updateUser, getUserActivity };
