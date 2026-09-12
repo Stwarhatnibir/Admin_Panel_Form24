@@ -173,17 +173,18 @@ earlier via the auto-generated links Firestore provides on a
 `firestore.indexes.json`: `informationRequests` (applicationId + createdAt)
 and `otpRequests` (applicationId + requestedAt). Both are genuinely
 required by `informationRequestService.js`/`otpService.js`'s list queries
+
 - an omission in my original audit, not indexes that should be deleted.
-Both are now in the file (59 total). If `firebase deploy` ever flags an
-index as "not present in your file" again, treat that as a signal to add
-it to the file, not to delete it, unless you're certain it's genuinely
-unused.
+  Both are now in the file (59 total). If `firebase deploy` ever flags an
+  index as "not present in your file" again, treat that as a signal to add
+  it to the file, not to delete it, unless you're certain it's genuinely
+  unused.
 
 ## Known issue found and fixed: missing Firestore composite indexes
 
 Phases 3-5 shipped without composite indexes for several filter+sort query
 combinations. This was missed during my own verification because I could
-only test against an *unconfigured* Firebase instance in this sandbox
+only test against an _unconfigured_ Firebase instance in this sandbox
 (network restrictions block Firebase's servers) - I verified routes
 returned the correct status codes (401 unauthenticated, etc.), but never
 exercised an actual Firestore query end-to-end, so a whole class of bug
@@ -224,7 +225,7 @@ whether it's already in the committed file.
   one, so this isn't a policy that could be violated by a future mistake.
 - **Documents** (Sections 24/25): list, verify, and request-re-upload are
   fully real and audited. Download works via a genuine 10-minute signed
-  Storage URL - never a public link. Seed data creates document *metadata*
+  Storage URL - never a public link. Seed data creates document _metadata_
   only (no real files uploaded to Storage, since uploading is the
   user-facing app's job, out of scope here), so downloading a seeded
   document will correctly 404 with a clear explanation rather than silently
@@ -307,7 +308,7 @@ whether it's already in the committed file.
   `getAlreadyRefundedAmount`'s `paymentId == / status ==`), which Firestore
   handles automatically. `firestore.indexes.json` grew from 50 to 57
   entries for this phase; each addition is commented with which query it
-  serves and, where relevant, why an index was deliberately *not* added.
+  serves and, where relevant, why an index was deliberately _not_ added.
 - **Applications' denormalized `paymentStatus` field (from Phase 4) is kept
   in sync** when a refund completes - `refundService.js` updates both the
   `payments` and `applications` documents so the Applications list still
@@ -461,3 +462,4 @@ an unbuilt section shows a plain "coming soon" page - not a fake button that
 pretends to do something. As each phase lands, its `implemented: false` flag
 in `client/src/constants/navigation.js` flips to `true` and the real page
 replaces the placeholder route in `client/src/App.jsx`.
+Yolo test badge
