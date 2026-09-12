@@ -10,6 +10,7 @@ import UserProfile from './pages/Users/UserProfile';
 import Applications from './pages/Applications/Applications';
 import ApplicationDetail from './pages/Applications/ApplicationDetail';
 import Conversations from './pages/Conversations/Conversations';
+import Documents from './pages/Documents/Documents';
 import ConversationDetail from './pages/Conversations/ConversationDetail';
 import Schemes from './pages/Schemes/Schemes';
 import Payments from './pages/Payments/Payments';
@@ -36,6 +37,7 @@ export default function App() {
               <Route path="/applications" element={<Applications />} />
               <Route path="/applications/:id" element={<ApplicationDetail />} />
               <Route path="/conversations" element={<Conversations />} />
+              <Route path="/documents" element={<Documents />} />
               <Route path="/conversations/:id" element={<ConversationDetail />} />
               <Route path="/schemes" element={<Schemes />} />
               <Route path="/payments" element={<Payments />} />

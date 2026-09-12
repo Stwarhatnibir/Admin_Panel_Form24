@@ -136,6 +136,34 @@ the next, rather than scaffolding everything at once.
   up a new message) against real Firestore data - same limitation noted in
   every earlier phase.
 
+## Known issue found and fixed: standalone Documents page was never built, and its index was missing too
+
+The sidebar's "Documents" link was left `implemented: false` since Phase 6,
+because only the per-application Documents tab (inside an Application's
+detail page) was actually built then - the standalone page that lists
+documents across *all* applications, matching how Users/Applications/
+Payments already work, was never implemented. This surfaced when the
+person building against this app clicked "Documents" in the sidebar and
+got the honest "coming soon" placeholder instead of a working page.
+
+**Fixed**: added `GET /api/documents` (list, with status filter and
+pagination) and the corresponding `client/src/pages/Documents/Documents.jsx`
+page, reusing the same verify/download/request-reupload actions already
+built for the per-application tab. The nav item is now `implemented: true`.
+
+**A second, more serious bug surfaced while fixing this**: auditing the
+`documents` collection's Firestore indexes for the new list endpoint
+revealed the collection had **zero** composite indexes defined at all -
+including for the *existing* per-application query
+(`listDocumentsForApplication`, `applicationId == / orderBy(uploadedAt)`),
+which has needed one since Phase 6 and never had it. This means the
+per-application Documents tab has likely been hitting the same
+`FAILED_PRECONDITION` error as `messages`/`internalNotes` did earlier,
+just not yet reported. All 7 needed composite indexes for `documents`
+(covering status/type/applicationId filter combinations) have now been
+added - `firestore.indexes.json` is at 68 total. **This needs a fresh
+`firebase deploy --only firestore:indexes` to take effect.**
+
 ## Known issue found and fixed: two indexes missing from the committed file
 
 While deploying indexes via `firebase deploy --only firestore:indexes`, the
