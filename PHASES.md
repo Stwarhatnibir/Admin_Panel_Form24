@@ -16,7 +16,7 @@ the next, rather than scaffolding everything at once.
 | 8 | Payments / Refunds (provider abstraction, Super Admin approval) | ✅ Done |
 | 9 | Notifications (FCM - individual, group, broadcast) | ✅ Done |
 | 10 | Admin management (add/remove Admin, activity log) | ✅ Done |
-| 11 | Audit logs, security hardening, permission testing, production cleanup | ⏳ Not started (audit log write path exists; UI + full test suite pending) |
+| 11 | Audit logs, security hardening, permission testing, production cleanup | ✅ Done |
 
 ## What "Done" means for Phases 1–2
 
@@ -135,6 +135,34 @@ the next, rather than scaffolding everything at once.
   multi-message conversation walkthrough (including watching the poll pick
   up a new message) against real Firestore data - same limitation noted in
   every earlier phase.
+
+## Known issue found and fixed: standalone Documents page was never built, and its index was missing too
+
+The sidebar's "Documents" link was left `implemented: false` since Phase 6,
+because only the per-application Documents tab (inside an Application's
+detail page) was actually built then - the standalone page that lists
+documents across *all* applications, matching how Users/Applications/
+Payments already work, was never implemented. This surfaced when the
+person building against this app clicked "Documents" in the sidebar and
+got the honest "coming soon" placeholder instead of a working page.
+
+**Fixed**: added `GET /api/documents` (list, with status filter and
+pagination) and the corresponding `client/src/pages/Documents/Documents.jsx`
+page, reusing the same verify/download/request-reupload actions already
+built for the per-application tab. The nav item is now `implemented: true`.
+
+**A second, more serious bug surfaced while fixing this**: auditing the
+`documents` collection's Firestore indexes for the new list endpoint
+revealed the collection had **zero** composite indexes defined at all -
+including for the *existing* per-application query
+(`listDocumentsForApplication`, `applicationId == / orderBy(uploadedAt)`),
+which has needed one since Phase 6 and never had it. This means the
+per-application Documents tab has likely been hitting the same
+`FAILED_PRECONDITION` error as `messages`/`internalNotes` did earlier,
+just not yet reported. All 7 needed composite indexes for `documents`
+(covering status/type/applicationId filter combinations) have now been
+added - `firestore.indexes.json` is at 68 total. **This needs a fresh
+`firebase deploy --only firestore:indexes` to take effect.**
 
 ## Known issue found and fixed: two indexes missing from the committed file
 
@@ -370,6 +398,59 @@ whether it's already in the committed file.
   lint both pass clean. Not yet verified: a live walkthrough against real
   Firestore data, including actually attempting the two lockout guards
   against real records - same limitation noted in every earlier phase.
+
+## What "Done" means for Phase 11
+
+- **Audit Logs page** (Section 33/34): a new `GET /api/audit-logs` endpoint,
+  restricted to Super Admin only - matching the spec's own distinction
+  between Section 5's Super-Admin "View complete audit logs" and Section
+  4's plain-Admin "View relevant activity/audit information" (the latter
+  is exactly what the existing entity-scoped views on Users/Applications/
+  Admins already provide to both roles). `auditService.listAuditLogs` was
+  extended with pagination and date-range filtering - this required
+  updating its three existing callers (user, application, and admin
+  activity views), whose code assumed the old return shape.
+- **The Audit Logs UI deliberately filters by one dimension at a time**
+  (Admin, Action, or Entity), always combinable with a date range, rather
+  than allowing arbitrary combinations of independent filters. This is the
+  same bounded-index approach used for Applications/Payments/Refunds -
+  arbitrary combinations would need a combinatorial number of Firestore
+  composite indexes. One new index (`action` + `timestamp`) was added;
+  total is now 61.
+- **A real, runnable permission test suite**
+  (`server/test/authorize.test.js`, run via `npm test`) using Node's
+  built-in test runner - no new dependency for a codebase this size. It
+  tests the actual `authorize()` middleware used by every route, not a
+  redescription of it, against the exact matrix from spec Section 53 (Admin
+  → Add Admin: DENIED, Super Admin → Add Admin: ALLOWED, etc.) plus several
+  more permission-table checks from Section 43. **Run and confirmed passing:
+  13/13.**
+- **Security/production-cleanup audit** - performed with small verification
+  scripts rather than manual inspection, so the claims below are checked,
+  not asserted:
+  - Every route except `POST /auth/login` requires `authenticate` -
+    confirmed by parsing every `router.METHOD(...)` call in every route
+    file and checking its middleware list, not by eyeballing.
+  - Every authenticated route also carries an explicit role check
+    (`authorize(...)`, `bothRoles`, or `superAdminOnly`) - same
+    parsing-based check, zero exceptions found.
+  - No stray `console.log`/`console.error` calls beyond the ones that
+    belong there (server startup, centralized error logging, the seed
+    script's clearly-labeled dev-credential printout, which already carries
+    its own "change these passwords" warning) - confirmed by grep across
+    both `server/` and `client/src/`. Zero `console.*` calls exist in the
+    frontend at all.
+  - No `TODO`/`FIXME`/`XXX` markers anywhere in the codebase.
+  - helmet, CORS (origin-restricted via env var), and rate limiting
+    (general + login-specific) are all wired in `server.js` - present since
+    Phase 1, reconfirmed here rather than assumed still correct.
+- Verified: backend syntax-checked and boot-tested with the new route; a
+  full route sweep confirmed correct 401s; the permission test suite was
+  actually executed (not just written) and passed 13/13, both before and
+  after a clean `npm install`. Frontend build and lint both pass clean.
+  Not yet verified: a live walkthrough of the Audit Logs UI against real
+  Firestore data with entries spanning multiple actors/actions/entities -
+  same limitation noted in every earlier phase.
 
 ## Nav items that exist but aren't built yet
 

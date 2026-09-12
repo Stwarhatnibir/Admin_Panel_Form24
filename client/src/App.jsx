@@ -10,12 +10,14 @@ import UserProfile from './pages/Users/UserProfile';
 import Applications from './pages/Applications/Applications';
 import ApplicationDetail from './pages/Applications/ApplicationDetail';
 import Conversations from './pages/Conversations/Conversations';
+import Documents from './pages/Documents/Documents';
 import ConversationDetail from './pages/Conversations/ConversationDetail';
 import Schemes from './pages/Schemes/Schemes';
 import Payments from './pages/Payments/Payments';
 import Refunds from './pages/Refunds/Refunds';
 import Notifications from './pages/Notifications/Notifications';
 import Admins from './pages/Admins/Admins';
+import AuditLogs from './pages/AuditLogs/AuditLogs';
 import ComingSoon from './pages/ComingSoon';
 import { NAV_ITEMS } from './constants/navigation';
 import { ROLES } from './constants/roles';
@@ -35,6 +37,7 @@ export default function App() {
               <Route path="/applications" element={<Applications />} />
               <Route path="/applications/:id" element={<ApplicationDetail />} />
               <Route path="/conversations" element={<Conversations />} />
+              <Route path="/documents" element={<Documents />} />
               <Route path="/conversations/:id" element={<ConversationDetail />} />
               <Route path="/schemes" element={<Schemes />} />
               <Route path="/payments" element={<Payments />} />
@@ -45,6 +48,14 @@ export default function App() {
                 element={
                   <RoleGate roles={[ROLES.SUPER_ADMIN]}>
                     <Admins />
+                  </RoleGate>
+                }
+              />
+              <Route
+                path="/audit-logs"
+                element={
+                  <RoleGate roles={[ROLES.SUPER_ADMIN]}>
+                    <AuditLogs />
                   </RoleGate>
                 }
               />

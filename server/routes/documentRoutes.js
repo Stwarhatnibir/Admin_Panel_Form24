@@ -3,13 +3,17 @@ const documentController = require('../controllers/documentController');
 const authenticate = require('../middleware/authenticate');
 const authorize = require('../middleware/authorize');
 const validateRequest = require('../middleware/validateRequest');
-const { requestReuploadSchema } = require('../validators/documentValidators');
+const { requestReuploadSchema, listDocumentsQuerySchema } = require('../validators/documentValidators');
 const { ROLES } = require('../constants/roles');
 
 const router = express.Router();
 
 const bothRoles = authorize(ROLES.ADMIN, ROLES.SUPER_ADMIN);
 
+// Standalone Documents page (Section 4: "View documents" is its own
+// capability, distinct from the per-application Documents tab on
+// Applications).
+router.get('/', authenticate, bothRoles, validateRequest(listDocumentsQuerySchema, { source: 'query' }), documentController.list);
 router.get('/:id', authenticate, bothRoles, documentController.getDocument);
 router.get('/:id/download', authenticate, bothRoles, documentController.download);
 router.post('/:id/verify', authenticate, bothRoles, documentController.verify);

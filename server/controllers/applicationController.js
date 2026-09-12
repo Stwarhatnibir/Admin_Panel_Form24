@@ -24,7 +24,7 @@ const updateStatus = asyncHandler(async (req, res) => {
 
 const getActivity = asyncHandler(async (req, res) => {
   const logs = await auditService.listAuditLogs({ entityType: 'application', entityId: req.params.id, limit: 50 });
-  res.status(200).json({ success: true, data: logs });
+  res.status(200).json({ success: true, data: logs.logs });
 });
 
 const listNotes = asyncHandler(async (req, res) => {

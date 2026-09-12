@@ -1,5 +1,11 @@
 import api from './api';
 
+async function listDocuments(params) {
+  const cleanParams = Object.fromEntries(Object.entries(params || {}).filter(([, v]) => v !== '' && v != null));
+  const { data } = await api.get('/documents', { params: cleanParams });
+  return { documents: data.data, pagination: data.pagination };
+}
+
 async function listForApplication(applicationId) {
   const { data } = await api.get(`/applications/${applicationId}/documents`);
   return data.data;
@@ -20,4 +26,4 @@ async function requestReupload(documentId, reason) {
   return data.data;
 }
 
-export default { listForApplication, download, verify, requestReupload };
+export default { listDocuments, listForApplication, download, verify, requestReupload };

@@ -11,6 +11,7 @@ const paymentRoutes = require('./paymentRoutes');
 const refundRoutes = require('./refundRoutes');
 const notificationRoutes = require('./notificationRoutes');
 const adminRoutes = require('./adminRoutes');
+const auditLogRoutes = require('./auditLogRoutes');
 
 const router = express.Router();
 
@@ -26,8 +27,6 @@ router.use('/payments', paymentRoutes);
 router.use('/refunds', refundRoutes);
 router.use('/notifications', notificationRoutes);
 router.use('/admins', adminRoutes);
-
-// Additional route modules (audit-logs) are added here as each build phase
-// is implemented - see PHASES.md.
+router.use('/audit-logs', auditLogRoutes);
 
 module.exports = router;

@@ -4,6 +4,32 @@ const { logAction } = require('./auditService');
 const { AUDIT_ACTIONS } = require('../constants/auditActions');
 const ApiError = require('../utils/ApiError');
 
+/**
+ * Lists documents across ALL applications, for the standalone Documents
+ * page (Section 4: "View documents" is its own Admin capability, distinct
+ * from the per-application Documents tab built in Phase 6). Supports the
+ * same optional status/type filters + pagination pattern used by
+ * Applications/Payments/Refunds, always sorted by most recently uploaded.
+ */
+async function listDocuments({ status, type, applicationId, page = 1, limit = 20 }) {
+  let query = db().collection(COLLECTIONS.DOCUMENTS);
+
+  if (status) query = query.where('status', '==', status);
+  if (type) query = query.where('type', '==', type);
+  if (applicationId) query = query.where('applicationId', '==', applicationId);
+
+  const countSnapshot = await query.count().get();
+
+  query = query.orderBy('uploadedAt', 'desc');
+  const offset = (page - 1) * limit;
+  const snapshot = await query.limit(limit).offset(offset).get();
+
+  return {
+    documents: toCollectionArray(snapshot),
+    pagination: { page, limit, total: countSnapshot.data().count },
+  };
+}
+
 async function listDocumentsForApplication(applicationId) {
   const snapshot = await db()
     .collection(COLLECTIONS.DOCUMENTS)
@@ -76,4 +102,4 @@ async function requestReupload(documentId, reason, actor) {
   return { id: documentId, ...updatedDoc.data() };
 }
 
-module.exports = { listDocumentsForApplication, getDocumentById, getDownloadUrl, verifyDocument, requestReupload };
+module.exports = { listDocuments, listDocumentsForApplication, getDocumentById, getDownloadUrl, verifyDocument, requestReupload };

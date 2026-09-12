@@ -50,27 +50,49 @@ async function logAction({
 
 /**
  * Lists audit logs with optional filters, newest first, paginated.
+ *
+ * The general-purpose Audit Logs page (Section 33/34) restricts its UI to
+ * filtering by at most one of {actorId, action, entityType+entityId} at a
+ * time, always combinable with a date range - this keeps the set of
+ * Firestore composite indexes bounded and enumerable rather than needing
+ * one for every possible combination of independent filters (the same
+ * approach taken for Applications/Payments/Refunds list queries). Passing
+ * more than one non-date filter at once is not validated against here
+ * (this function stays a thin, generic query builder) but the frontend
+ * never does it - see AuditLogs.jsx.
+ *
  * @param {Object} filters
  * @param {string} [filters.actorId]
  * @param {string} [filters.action]
  * @param {string} [filters.entityType]
  * @param {string} [filters.entityId]
+ * @param {string} [filters.dateFrom] - ISO date string
+ * @param {string} [filters.dateTo] - ISO date string
+ * @param {number} [filters.page]
  * @param {number} [filters.limit]
- * @param {string} [filters.cursor] - document id to start after
  */
 async function listAuditLogs(filters = {}) {
-  const { actorId, action, entityType, entityId, limit = 25 } = filters;
-  let query = db().collection(COLLECTIONS.AUDIT_LOGS).orderBy('timestamp', 'desc');
+  const { actorId, action, entityType, entityId, dateFrom, dateTo, page = 1, limit = 25 } = filters;
+  let query = db().collection(COLLECTIONS.AUDIT_LOGS);
 
   if (actorId) query = query.where('actorId', '==', actorId);
   if (action) query = query.where('action', '==', action);
   if (entityType) query = query.where('entityType', '==', entityType);
   if (entityId) query = query.where('entityId', '==', entityId);
+  if (dateFrom) query = query.where('timestamp', '>=', new Date(dateFrom));
+  if (dateTo) query = query.where('timestamp', '<=', new Date(dateTo));
 
-  query = query.limit(Math.min(limit, 100));
+  const countSnapshot = await query.count().get();
 
-  const snapshot = await query.get();
-  return toCollectionArray(snapshot);
+  query = query.orderBy('timestamp', 'desc');
+  const boundedLimit = Math.min(limit, 100);
+  const offset = (page - 1) * boundedLimit;
+  const snapshot = await query.limit(boundedLimit).offset(offset).get();
+
+  return {
+    logs: toCollectionArray(snapshot),
+    pagination: { page, limit: boundedLimit, total: countSnapshot.data().count },
+  };
 }
 
 module.exports = { logAction, listAuditLogs };

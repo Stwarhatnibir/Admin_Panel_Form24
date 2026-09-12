@@ -6,6 +6,11 @@ const listForApplication = asyncHandler(async (req, res) => {
   res.status(200).json({ success: true, data: documents });
 });
 
+const list = asyncHandler(async (req, res) => {
+  const result = await documentService.listDocuments(req.query);
+  res.status(200).json({ success: true, data: result.documents, pagination: result.pagination });
+});
+
 const getDocument = asyncHandler(async (req, res) => {
   const document = await documentService.getDocumentById(req.params.id);
   res.status(200).json({ success: true, data: document });
@@ -26,4 +31,4 @@ const requestReupload = asyncHandler(async (req, res) => {
   res.status(200).json({ success: true, data: document });
 });
 
-module.exports = { listForApplication, getDocument, download, verify, requestReupload };
+module.exports = { list, listForApplication, getDocument, download, verify, requestReupload };
